@@ -248,6 +248,16 @@ body {
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 
+/* ================= اتاق شخصی ================= */
+.private-room-section { padding: 80px 5%; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 2; background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(168,85,247,0.05) 100%); }
+.private-room-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(168,85,247,0.3); border-radius: 20px; padding: 30px; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.private-room-card h2 { color: var(--purple); margin-bottom: 20px; font-size: 1.5rem; }
+.private-room-card input[type="email"], .private-room-card input[type="password"], .private-room-card textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; font-family: var(--font-fa); outline: none; }
+.private-room-card button { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; background: linear-gradient(90deg, var(--purple), var(--pink)); color: #fff; font-family: var(--font-fa); margin-bottom: 10px; transition: transform 0.2s; }
+.private-room-card button:hover { transform: scale(1.02); }
+.private-room-card .toggle-btn { background: transparent; color: var(--purple); font-size: 0.9rem; margin-top: 5px; }
+#logged-in-area { display: none; }
+
 /* ================= بهینه‌سازی اختصاصی برای موبایل ================= */
 @media (max-width: 480px) {
   .chat-device { border-width: 4px; border-radius: 25px; min-height: 420px; }
@@ -566,6 +576,33 @@ footer i { color: var(--pink); animation: heartbeat 1.5s infinite; display: inli
   </div>
 </section>
 
+<!-- بخش اتاق شخصی مهسا -->
+<section class="private-room-section">
+  <h2 class="section-title" style="margin-bottom: 20px;">اتاق شخصی <span>مهسا</span> ❤️</h2>
+  <div class="private-room-card">
+    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">فقط برای چشمای خودت...</p>
+    
+    <!-- بخش ورود / ثبت نام -->
+    <div id="auth-area">
+      <input type="email" id="email" placeholder="ایمیلت رو وارد کن">
+      <input type="password" id="password" placeholder="یک رمز عبور بساز (حداقل 6 کاراکتر)">
+      <button onclick="signUp()">ثبت‌نام (ساخت حساب)</button>
+      <button onclick="login()" style="background: transparent; border: 1px solid var(--purple);">ورود به حساب</button>
+      <p id="auth-msg" style="color: var(--pink); font-size: 0.85rem; margin-top: 10px;"></p>
+    </div>
+
+    <!-- بخش آپلود و متن (بعد از لاگین) -->
+    <div id="logged-in-area">
+      <p style="color: #4ade80; margin-bottom: 15px; font-weight: bold;">خوش اومدی مهسا! ❤️</p>
+      
+      <textarea id="personal-note" placeholder="هرچی دوست داری برام بنویس..."></textarea>
+      <button onclick="saveNote()">ذخیره متن</button>
+
+      <button onclick="logout()" style="background: rgba(255,0,0,0.2); border: 1px solid #ff0000; margin-top: 15px;">خروج از حساب</button>
+    </div>
+  </div>
+</section>
+
 <footer>
   با عشق برای <b style="color: var(--pink);">مهسا جونم</b> ساخته شد <i class="fa-solid fa-heart"></i>
 </footer>
@@ -705,6 +742,100 @@ window.addEventListener('scroll', () => {
   const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
   document.getElementById('progress-bar').style.width = (scrollY / height) * 100 + '%';
 });
+
+// ================= اتصال به بک‌اند و Turso (اتاق شخصی) =================
+// ⚠️ این آدرس رو بعد از ساخت Web Service در Render اینجا بذار
+const BACKEND_URL = "https://YOUR-BACKEND-NAME.onrender.com"; 
+
+let authToken = localStorage.getItem('mahsa_token') || null;
+
+const authArea = document.getElementById('auth-area');
+const loggedInArea = document.getElementById('logged-in-area');
+const authMsg = document.getElementById('auth-msg');
+
+function showLoggedIn() {
+  authArea.style.display = 'none';
+  loggedInArea.style.display = 'block';
+}
+
+if (authToken) {
+  showLoggedIn();
+}
+
+async function signUp() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      authMsg.style.color = "#4ade80";
+      authMsg.innerText = "ثبت‌نام موفقیت‌آمیز بود! حالا وارد شو.";
+    } else {
+      authMsg.style.color = "var(--pink)";
+      authMsg.innerText = data.error;
+    }
+  } catch (e) {
+    authMsg.innerText = "خطا در ارتباط با سرور";
+  }
+}
+
+async function login() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      authToken = data.token;
+      localStorage.setItem('mahsa_token', authToken);
+      authMsg.innerText = "";
+      showLoggedIn();
+    } else {
+      authMsg.style.color = "var(--pink)";
+      authMsg.innerText = data.error;
+    }
+  } catch (e) {
+    authMsg.innerText = "خطا در ارتباط با سرور";
+  }
+}
+
+function logout() {
+  authToken = null;
+  localStorage.removeItem('mahsa_token');
+  authArea.style.display = 'block';
+  loggedInArea.style.display = 'none';
+}
+
+async function saveNote() {
+  const text = document.getElementById('personal-note').value;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/save-note`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("متن با موفقیت ذخیره شد! ❤️");
+    } else {
+      alert("خطا: " + data.error);
+    }
+  } catch (e) {
+    alert("خطا در ارتباط با سرور");
+  }
+}
 </script>
 </body>
 </html>
